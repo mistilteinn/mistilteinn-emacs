@@ -42,9 +42,12 @@ require 'uri'
 require 'open-uri'
 require 'json'
 require 'optparse'
+require 'pp'
+
 
 Root = %x(git config redmine.url).strip
 ApiKey = %x(git config redmine.apikey).strip
+Project = %x(git config redmine.project).strip
 
 if Root.empty? or ApiKey.empty? then
   puts <<-END
@@ -78,7 +81,9 @@ unless ARGV.empty?
 end
 
 branch = %x(git branch -l | grep "*" | cut -d " " -f 2).strip
-if branch =~ %r!id/(\d+)! then
+
+case branch
+when %r!id/(\d+)!
   ticket = $1
   url = URI(Root+"/") + "./issues/#{ticket}.json?key=#{ApiKey}&include=journals"
 
@@ -103,6 +108,21 @@ Subject: #{issue['subject']}
 
           END
         end
+      end
+    end
+  rescue => e
+    puts "cannot access: #{url}"
+    puts e
+    puts e.backtrace
+  end
+when "master"
+  url = URI(Root+"/") + "./issues.json?project_id=#{Project}&key=#{ApiKey}"
+
+  begin
+    open(url) do |io|
+      issues = JSON.parse(io.read)['issues']
+      issues.each do|issue|
+        puts "#{issue['id']} #{issue['subject'].gsub("\n","")}"
       end
     end
   rescue => e
