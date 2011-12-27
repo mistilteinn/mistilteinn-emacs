@@ -23,6 +23,8 @@
 ;;
 
 ;;; Code:
+
+;; anything
 (defun mi:switch-topic-branch (str)
   (shell-command (format "git ticket switch %s" (car (split-string str " ")))
                  "*git-ticket*"))
@@ -32,6 +34,22 @@
     (candidates-in-buffer)
     (init . (lambda () (call-process-shell-command "git ticket list" nil (anything-candidate-buffer 'git-ticket))))
     (action ("Switch topic branch" . mi:switch-topic-branch))))
+
+;; minor mode
+(defun mistilteinn-git-now ()
+  (interactive)
+  (shell-command "git now"))
+
+(defvar mistilteinn-mode-map (make-sparse-keymap)
+  "Keymap for the mistilteinn minor mode.")
+
+(define-minor-mode mistilteinn-minor-mode
+  "mistilteinn"
+  :global t
+  :lighter " mistilteinn"
+  (funcall (if mistilteinn-minor-mode 'add-hook 'remove-hook)
+           'after-save-hook
+           'mistilteinn-git-now))
 
 (provide 'mistilteinn)
 ;;; mistilteinn.el ends here
