@@ -107,9 +107,8 @@ class GitTicket
 
   def cmd_switch(id)
     branch = "id/#{id}"
-    system "git now"
-    system "git branch #{branch}", "Create topic branch(if need)"
-    system "git checkout #{branch}", "Checkout topic branch"
+    system "git branch #{branch}"
+    system "git checkout #{branch}"
     puts "Switch to topic branch: #{@its.summary(id)}"
   end
 
