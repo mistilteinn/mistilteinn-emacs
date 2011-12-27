@@ -1,133 +1,140 @@
 #!/usr/bin/ruby
 # -*- coding: utf-8 -*-
-
-=begin rdoc
-Install
-----------
-
-Move into a directory in PATH environment variable.
-
-   $ mv git-ticket /path/to/some/dir
-   $ chmod a+x /path/to/some/dir/git-ticket
-
-If you use old ruby(e.g. Ruby 1.8), you should install json library.
-
-   $ gem install json
-   $ export RUBYOPT=rubygems
-
-Setup
------------
-
-Set your redmine root and API Key.
-
-   git config redmine.url http://example.com/redmine
-   git config redmine.apikey some_api_key
-
-Usage
------------
-
-And create topic branch.
-
-   git ticket 42
-
-At topic branch, you could see ticket summary.
-
-   git ticket
-
-This subcommand use bleis-style branch name. Please see also https://github.com/bleis-tift/Git-Hooks/ .
-=end
-
-require 'openssl'
 require 'uri'
 require 'open-uri'
 require 'json'
-require 'optparse'
 require 'pp'
 
-
-Root = %x(git config redmine.url).strip
-ApiKey = %x(git config redmine.apikey).strip
-Project = %x(git config redmine.project).strip
-
-if Root.empty? or ApiKey.empty? then
-  puts <<-END
-please set redmine url & redmine api key
-
-  git config redmine.url http://example.com/redmine
-  git config redmine.apikey some_api_key
-END
-  exit 0
-end
-# ------------------------------
-# main
-# ------------------------------
-ProgramConfig = {}
-opts = OptionParser.new
-opts.banner = 'git ticket [options] [id]'
-opts.on("-f", "--force","force create branch"){
-  ProgramConfig[:force] = true
-}
-opts.on("-n", "--no-verify", "not verify ssl"){
-  OpenSSL::SSL::VERIFY_PEER = OpenSSL::SSL::VERIFY_NONE
-}
-opts.parse!(ARGV)
-
-unless ARGV.empty?
-  ticket, _ = *ARGV
-  if ProgramConfig[:force]
-    system "git branch -D id/#{ticket}"
+class Git
+  def config(name)
+    str = %x(git config #{name} 2>/dev/null || echo "").strip
+    if str.empty? then
+      nil
+    else
+      str
+    end
   end
-  system "git checkout -b id/#{ticket}"
+
+  def branch
+    %x(git branch -l | grep "*" | cut -d " " -f 2).strip
+  end
+
+  def ticket_id
+    $1 if branch =~ %r!id/(\d+)!
+  end
 end
 
-branch = %x(git branch -l | grep "*" | cut -d " " -f 2).strip
+class Redmine
+  def initialize(git)
+    @root    = git.config "redmine.url"
+    @key     = git.config "redmine.apikey"
+    @project = git.config "redmine.project"
+  end
 
-case branch
-when %r!id/(\d+)!
-  ticket = $1
-  url = URI(Root+"/") + "./issues/#{ticket}.json?key=#{ApiKey}&include=journals"
+  def tickets
+    api("issues", :project_id => @project)['issues']
+  end
 
-  begin
-    open(url) do |io|
-      issue = JSON.parse(io.read)['issue']
-      puts <<-END
-     id: #{issue['id']}
+  def summary(id)
+    issue = api("issues/#{id}", :include => "journals")["issue"]
+    "\##{issue['id']} #{issue['subject']}"
+  end
+
+  def info(id)
+    issue = api("issues/#{id}", :include => "journals")["issue"]
+    body = <<-END
+     ID: #{issue['id']}
 Subject: #{issue['subject']}
  Author: #{issue['author']['name']}
    Date: #{issue['updated_on']}
-
-#{issue['description']}
     END
 
-      puts "","notes: "
+    unless issue['description'].empty?
+      body << "\n"
+      body << issue['description']
+    end
+
+    unless issue['journals'].empty?
+      body << "\n\nnotes: \n"
+
       issue['journals'].each_with_index do |journal, i|
         unless journal['notes'] == ''
-          puts <<-END
+          body << <<-END
 ##{i+1}:
 #{journal['notes']}
-
           END
         end
       end
     end
-  rescue => e
-    puts "cannot access: #{url}"
-    puts e
-    puts e.backtrace
-  end
-when "master"
-  url = URI(Root+"/") + "./issues.json?project_id=#{Project}&key=#{ApiKey}"
 
-  begin
-    open(url) do |io|
-      issues = JSON.parse(io.read)['issues']
-      issues.each do|issue|
-        puts "#{issue['id']} #{issue['subject'].gsub("\n","")}"
+    body
+  end
+
+  def api(path, params = {})
+    params[:key] = @key if @key
+    url = URI(@root+"/") + ("./#{path}.json?" + params.map{|key,value| "#{key}=#{value}" }.join("&"))
+
+    begin
+      open(url) do |io|
+        JSON.parse(io.read)
       end
+    rescue => e
+      puts "cannot access: #{url}"
+      raise e
     end
-  rescue => e
-    puts "cannot access: #{url}"
-    puts e
-    puts e.backtrace
   end
 end
+
+class GitTicket
+  def initialize(git, its)
+    @git = git
+    @its = its
+  end
+
+  def cmd_list
+    @its.tickets.each do|ticket|
+      puts "#{ticket['id']} #{ticket['subject']}"
+    end
+  end
+
+  def cmd_summary(id = @git.ticket_id)
+    puts @its.summary(id)
+  end
+
+  def cmd_info(id = @git.ticket_id)
+    puts @its.info(id)
+  end
+
+  def cmd_switch(id)
+    branch = "id/#{id}"
+    system "git now"
+    system "git branch #{branch}", "Create topic branch(if need)"
+    system "git checkout #{branch}", "Checkout topic branch"
+    puts "Switch to topic branch: #{@its.summary(id)}"
+  end
+
+  def default(args)
+    if args.empty?
+      case @git.branch
+      when %r!id/(\d+)!
+        cmd_info
+      else
+        cmd_list
+      end
+    else
+      cmd_switch(*args)
+    end
+  end
+end
+
+git = Git.new
+its = Redmine.new git
+git_ticket = GitTicket.new git, its
+
+cmd = "cmd_#{ARGV.first}".to_sym
+if git_ticket.respond_to? cmd then
+  git_ticket.send cmd, *ARGV[1..-1]
+else
+  git_ticket.default(ARGV)
+end
+
