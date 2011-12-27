@@ -24,13 +24,13 @@
 
 ;;; Code:
 (defun mi:switch-topic-branch (str)
-  (shell-command (format "git ticket %s" (car (split-string str " ")))
+  (shell-command (format "git ticket switch %s" (car (split-string str " ")))
                  "*git-ticket*"))
 
 (defvar anything-c-source-git-ticket
   '((name . "Tickets")
     (candidates-in-buffer)
-    (init . (lambda () (call-process-shell-command "git-ticket" nil (anything-candidate-buffer 'git-ticket))))
+    (init . (lambda () (call-process-shell-command "git ticket list" nil (anything-candidate-buffer 'git-ticket))))
     (action ("Switch topic branch" . mi:switch-topic-branch))))
 
 (provide 'mistilteinn)
