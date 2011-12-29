@@ -78,6 +78,59 @@
   (interactive)
   (shell-command "git ticket info" "*mistilteinn-info*"))
 
+;; message
+(defvar mi:message-buffer "*mistilteinn-message*")
+
+(defun mi:close-message-buffer ()
+  (interactive)
+  (kill-buffer (current-buffer)))
+
+(defun mi:make-message-keymap (f)
+  "create keymap for message buffer"
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") f)
+    (define-key map (kbd "C-g") 'mi:close-message-buffer)
+    map))
+
+(defvar mi:message-help
+"
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+")
+
+(defvar mi:message-font-locks
+  '(("^\\(#.*\\)$"
+     (1 font-lock-comment-face t))))
+
+(defun mi:show-message-buffer (f)
+  "create commit message buffer"
+  (let ((buffer (generate-new-buffer mi:message-buffer)))
+    (with-current-buffer buffer
+      ;; restore window configure at kill buffer
+      (add-hook 'kill-buffer-hook
+                (lexical-let ((wc (current-window-configuration)))
+                  #'(lambda ()
+                      (set-window-configuration wc))) nil t)
+      ;; set keybind
+      (use-local-map (mi:make-message-keymap f))
+      ;; set fontlock
+      (font-lock-add-keywords nil mi:message-font-locks)
+      (when global-font-lock-mode (font-lock-mode t))
+      ;; add help message
+      (insert "# C-c C-c: commit; C-g: close buffer\n")
+      (save-excursion (insert mi:message-help)))
+    (pop-to-buffer buffer)))
+
+(defun mi:git-fixup ()
+  (interactive)
+  (shell-command (format "git now --fixup \"%s\"" (replace-regexp-in-string "^#.*$" "" (buffer-string))))
+  (mi:close-message-buffer))
+
+(defun mistilteinn-git-fixup ()
+  "run git-now --fixup to fixup now commit"
+  (interactive)
+  (mi:show-message-buffer 'mi:git-fixup))
+
 ;; ------------------------------
 ;; anything
 ;; ------------------------------
@@ -108,6 +161,7 @@
 (define-key mistilteinn-minor-mode-map (kbd "C-c # m") 'mistilteinn-git-master)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # n") 'mistilteinn-git-now)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # i") 'mistilteinn-git-info)
+(define-key mistilteinn-minor-mode-map (kbd "C-c # f") 'mistilteinn-git-fixup)
 
 (define-minor-mode mistilteinn-minor-mode
   "mistilteinn"
