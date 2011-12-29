@@ -26,6 +26,33 @@
 (require 'cl)
 
 ;; ------------------------------
+;; config
+;; ------------------------------
+(defgroup mistilteinn nil
+  "New style development with git and emacs"
+  :group 'tools)
+
+(defcustom mistilteinn-exclude-modes  '(dummy1-mode dummy2-mode)
+  "Major modes `mistilteinn-minor-mode' cannot run."
+  :type '(list symbol)
+  :group 'mistilteinn)
+
+(defcustom mistilteinn-inactive-ticket-regexp  "\\[解決\\]"
+  "Inactive ticket regexp"
+  :type 'string
+  :group 'mistilteinn)
+
+(defface mistilteinn-inactive-ticket-face
+  '((t (:foreground "blue")))
+  "*Face used for inactive ticket"
+  :group 'mistilteinn)
+
+(defface mistilteinn-active-ticket-face
+  '()
+  "*Face used for active ticket"
+  :group 'mistilteinn)
+
+;; ------------------------------
 ;; git command
 ;; ------------------------------
 (defun mistilteinn-git-now ()
@@ -57,8 +84,8 @@
   (loop for ticket in tickets
       collect
       (cond
-       ((string-match "\\[解決\\]" ticket) (propertize ticket 'face 'anything-ff-directory))
-       (t ticket))))
+       ((string-match mistilteinn-inactive-ticket-regexp ticket) (propertize ticket 'face 'mistilteinn-inactive-ticket-face))
+       (t (propertize ticket 'face 'mistilteinn-active-ticket-face)))))
 
 (defvar anything-c-source-git-ticket
   '((name . "Tickets")
@@ -70,8 +97,6 @@
 ;; ------------------------------
 ;; minor mode
 ;; ------------------------------
-(defvar *mistilteinn-exclude-mode* '())
-
 (defvar mistilteinn-minor-mode-map (make-sparse-keymap)
   "Keymap for the mistilteinn minor mode.")
 
@@ -90,7 +115,7 @@
 (defun mi:mode-switch ()
   "Return t and enable mistilteinn-mode if `widen-current-window' can called on current buffer."
   (when (and (not (minibufferp (current-buffer)))
-             (not (memq major-mode *mistilteinn-exclude-mode*)))
+             (not (memq major-mode mistilteinn-exclude-modes)))
     (mistilteinn-minor-mode t)))
 
 (define-global-minor-mode global-mistilteinn-mode
