@@ -4,6 +4,8 @@ require 'uri'
 require 'open-uri'
 require 'json'
 require 'pp'
+require 'net/http'
+require 'net/https'
 
 class Git
   def config(name)
@@ -70,6 +72,14 @@ Subject: #{issue['subject']}
     body
   end
 
+  def create(title)
+    post('issues', {}, {
+           :issue => {
+             :project_id => @project,
+             :subject => title,
+           }}.to_json)
+  end
+
   def api(path, params = {})
     params[:key] = @key if @key
     url = URI(@root+"/") + ("./#{path}.json?" + params.map{|key,value| "#{key}=#{value}" }.join("&"))
@@ -81,6 +91,20 @@ Subject: #{issue['subject']}
     rescue => e
       puts "cannot access: #{url}"
       raise e
+    end
+  end
+
+  def post(path, params, data)
+    url = URI(@root+"/") + "./#{path}.json?"
+
+    http = Net::HTTP.new(url.host, url.port)
+    http.use_ssl = url.scheme == 'https'
+
+    http.start do
+      p http.post(url.path,data, {
+                    "X-Redmine-API-Key" => @key,
+                    "Content-Type" => "application/json"
+                  })
     end
   end
 end
@@ -111,6 +135,10 @@ class GitTicket
       system "git checkout -b #{branch}"
     end
     puts "Switch to topic branch: #{@its.summary(id)}"
+  end
+
+  def cmd_create(title)
+    @its.create title
   end
 
   def default(args)
