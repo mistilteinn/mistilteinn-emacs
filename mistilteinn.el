@@ -64,12 +64,16 @@
 ;; ------------------------------
 (defvar *mistilteinn-exclude-mode* '())
 
-(defvar mistilteinn-mode-map (make-sparse-keymap)
+(defvar mistilteinn-minor-mode-map (make-sparse-keymap)
   "Keymap for the mistilteinn minor mode.")
+
+(define-key mistilteinn-minor-mode-map (kbd "C-c # m") 'mistilteinn-git-master)
+(define-key mistilteinn-minor-mode-map (kbd "C-c # n") 'mistilteinn-git-now)
 
 (define-minor-mode mistilteinn-minor-mode
   "mistilteinn"
   :lighter " mi"
+  :keymap mistilteinn-minor-mode-map
   :group mistilteinn-mode
   (funcall (if mistilteinn-minor-mode 'add-hook 'remove-hook)
            'after-save-hook
