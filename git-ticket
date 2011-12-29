@@ -93,7 +93,7 @@ class GitTicket
 
   def cmd_list
     @its.tickets.each do|ticket|
-      puts "#{ticket['id']} #{ticket['subject']}"
+      puts "#{ticket['id']} #{ticket['subject']} [#{ticket['status']['name']}]"
     end
   end
 

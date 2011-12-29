@@ -53,9 +53,17 @@
   (shell-command (format "git ticket switch %s" (car (split-string str " ")))
                  "*git-ticket*"))
 
+(defun mi:highlight-ticket (tickets)
+  (loop for ticket in tickets
+      collect
+      (cond
+       ((string-match "\\[解決\\]" ticket) (propertize ticket 'face 'anything-ff-directory))
+       (t ticket))))
+
 (defvar anything-c-source-git-ticket
   '((name . "Tickets")
     (candidates-in-buffer)
+    (candidate-transformer mi:highlight-ticket)
     (init . (lambda () (call-process-shell-command "git ticket list" nil (anything-candidate-buffer 'git-ticket))))
     (action ("Switch topic branch" . mi:switch-topic-branch))))
 
