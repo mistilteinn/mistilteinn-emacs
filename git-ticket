@@ -101,10 +101,15 @@ Subject: #{issue['subject']}
     http.use_ssl = url.scheme == 'https'
 
     http.start do
-      p http.post(url.path,data, {
-                    "X-Redmine-API-Key" => @key,
-                    "Content-Type" => "application/json"
-                  })
+      ret = http.post(url.path,data, {
+                        "X-Redmine-API-Key" => @key,
+                        "Content-Type" => "application/json"
+                      })
+      case ret
+      when Net::HTTPSuccess
+      else
+        raise "error: #{ret}"
+      end
     end
   end
 end

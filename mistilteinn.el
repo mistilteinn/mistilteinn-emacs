@@ -78,6 +78,11 @@
   (interactive)
   (shell-command "git ticket info" "*mistilteinn-info*"))
 
+(defun mistilteinn-git-ticket-create (subject)
+  "run git ticket create to create ticket"
+  (interactive "sSubject: ")
+  (shell-command (format "git ticket create \"%s\"" subject)))
+
 ;; message
 (defvar mi:message-buffer "*mistilteinn-message*")
 
@@ -158,6 +163,7 @@
 (defvar mistilteinn-minor-mode-map (make-sparse-keymap)
   "Keymap for the mistilteinn minor mode.")
 
+(define-key mistilteinn-minor-mode-map (kbd "C-c # c") 'mistilteinn-git-ticket-create)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # m") 'mistilteinn-git-master)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # n") 'mistilteinn-git-now)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # i") 'mistilteinn-git-info)
