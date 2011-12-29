@@ -23,6 +23,7 @@
 ;;
 
 ;;; Code:
+(require 'cl)
 
 ;; ------------------------------
 ;; git command
@@ -31,6 +32,19 @@
   "run git-now to create temporary commit"
   (interactive)
   (shell-command "git now --compact"))
+
+(defun mi:branch-list ()
+  (remove-if
+   '(lambda (s) (string= "" s))
+   (split-string (shell-command-to-string "git branch | sed 's/^. *//g'")
+                 "\n")))
+
+(defun mistilteinn-git-master ()
+  "run git-master to masterize current topic branch"
+  (interactive)
+  (let* ((branch (completing-read "git-master (default master): " (mi:branch-list) nil nil "master" nil "master"))
+         (cmd    (format "git master %s" branch)))
+    (shell-command cmd)))
 
 ;; ------------------------------
 ;; anything
