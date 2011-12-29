@@ -73,6 +73,11 @@
          (cmd    (format "git master %s" branch)))
     (shell-command cmd)))
 
+(defun mistilteinn-git-info ()
+  "run git-ticket summary to show ticket info"
+  (interactive)
+  (shell-command "git ticket info" "*mistilteinn-info*"))
+
 ;; ------------------------------
 ;; anything
 ;; ------------------------------
@@ -102,6 +107,7 @@
 
 (define-key mistilteinn-minor-mode-map (kbd "C-c # m") 'mistilteinn-git-master)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # n") 'mistilteinn-git-now)
+(define-key mistilteinn-minor-mode-map (kbd "C-c # i") 'mistilteinn-git-info)
 
 (define-minor-mode mistilteinn-minor-mode
   "mistilteinn"

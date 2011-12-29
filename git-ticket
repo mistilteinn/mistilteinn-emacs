@@ -55,7 +55,7 @@ Subject: #{issue['subject']}
     end
 
     unless issue['journals'].empty?
-      body << "\n\nnotes: \n"
+      body << "\n\nnotes:\n"
 
       issue['journals'].each_with_index do |journal, i|
         unless journal['notes'] == ''
