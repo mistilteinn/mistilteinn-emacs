@@ -28,8 +28,9 @@
 ;; git command
 ;; ------------------------------
 (defun mistilteinn-git-now ()
+  "run git-now to create temporary commit"
   (interactive)
-  (shell-command "git now"))
+  (shell-command "git now --compact"))
 
 ;; ------------------------------
 ;; anything
