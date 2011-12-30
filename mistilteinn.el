@@ -188,4 +188,16 @@
   mistilteinn-minor-mode mi:mode-switch)
 
 (provide 'mistilteinn)
+
+;; ------------------------------
+;; tests
+;; ------------------------------
+(dont-compile
+  (when (fboundp 'expectations)
+    (expectations
+     (desc "call create command with subject by mistilteinn-git-ticket-create")
+     (expect (mock (shell-command "git ticket create \"ticket title\""))
+       (mistilteinn-git-ticket-create "ticket title"))
+)))
+
 ;;; mistilteinn.el ends here
