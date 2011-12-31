@@ -148,7 +148,9 @@
 
 (defun mi:git-dir-p (path)
   "Check `path' is git repository"
-  (save-excursion (mi:with-cd path (eq 0 (shell-command "git rev-parse")))))
+  (when (and (file-exists-p path)
+             (file-directory-p path))
+    (save-excursion (mi:with-cd path (eq 0 (shell-command "git rev-parse"))))))
 
 ;; ------------------------------
 ;; anything
