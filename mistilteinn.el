@@ -66,7 +66,7 @@
   "A keymap for message buffer. ")
 
 (define-key mi:message-keymap (kbd "C-c C-c") 'mi:commit-message-buffer)
-(define-key mi:message-keymap (kbd "C-g") 'mi:close-message-buffer)
+(define-key mi:message-keymap (kbd "C-c C-q") 'mi:close-message-buffer)
 
 (defconst mi:message-help
 "
@@ -94,7 +94,7 @@
       (font-lock-add-keywords nil mi:message-font-locks)
       (when global-font-lock-mode (font-lock-mode t))
       ;; add help message
-      (insert "# C-c C-c: commit; C-g: close buffer\n")
+      (insert "# C-c C-c: commit; C-c C-q: close buffer\n")
       (save-excursion (insert mi:message-help)))
     (pop-to-buffer buffer)))
 

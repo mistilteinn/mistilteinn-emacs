@@ -39,7 +39,7 @@ bar
         )
       (desc "message buffer: keymap")
       (expect 'mi:close-message-buffer
-        (lookup-key mi:message-keymap (kbd "C-g")))
+        (lookup-key mi:message-keymap (kbd "C-c C-q")))
       (expect 'mi:commit-message-buffer
         (lookup-key mi:message-keymap (kbd "C-c C-c")))
       (desc "message buffer: callback after commit messeage")
