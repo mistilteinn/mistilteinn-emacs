@@ -1,3 +1,4 @@
+;; -*- coding: utf-8 -*-
 ;;; mistilteinn-test.el ---
 
 (require 'mistilteinn)
