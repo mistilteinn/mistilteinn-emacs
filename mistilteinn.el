@@ -1,14 +1,13 @@
-;;; mistilteinn.el ---bleis workflow
 ;;; -*- coding: utf-8 -*-
+;;; mistilteinn.el ---bleis workflow
 ;; Copyright (C) 2011  mzp
 
 
 ;;; Code:
 (require 'cl)
 
-;;;; ------------------------------
 ;;;; configure
-;;;; ------------------------------
+;;; The definition of mistilteinn.
 (defgroup mistilteinn nil
   "New style development with git and emacs"
   :group 'tools)
@@ -43,32 +42,40 @@
   "*Face used for active ticket"
   :group 'mistilteinn)
 
-;;;; ------------------------------
-;;;; message buffer
-;;;; ------------------------------
+;;;; message buffer function
+;;; Create message buffer and popup for user to input commit message etc.
 (defun mi:close-message-buffer ()
+  "Close current message buffer."
   (interactive)
   (kill-buffer (current-buffer)))
 
-(defun mi:make-message-keymap (f)
-  "create keymap for message buffer"
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") f)
-    (define-key map (kbd "C-g") 'mi:close-message-buffer)
-    map))
+(defvar mi:commit (lambda () nil))
+(make-variable-buffer-local 'mi:commit)
+(defun mi:commit-message-buffer ()
+  "Commit current message buffer."
+  (interactive)
+  (funcall mi:commit)
+  (mi:close-message-buffer))
 
-(defvar mi:message-help
+(defvar mi:message-keymap
+  (make-sparse-keymap)
+  "A keymap for message buffer. ")
+
+(define-key mi:message-keymap (kbd "C-c C-c") 'mi:commit-message-buffer)
+(define-key mi:message-keymap (kbd "C-g") 'mi:close-message-buffer)
+
+(defconst mi:message-help
 "
 # Please enter the commit message for your changes. Lines starting
 # with '#' will be ignored, and an empty message aborts the commit.
 ")
 
-(defvar mi:message-font-locks
-  '(("^\\(#.*\\)$"
-     (1 font-lock-comment-face t))))
+(defconst mi:message-font-locks
+  '(("^\\(#.*\\)$" (1 font-lock-comment-face t))   ;; highlight comment
+    ))
 
 (defun mi:show-message-buffer (f)
-  "create commit message buffer"
+  "Show message buffer and callback `f' when user input is completed."
   (let ((buffer (generate-new-buffer mistilteinn-message-buffer)))
     (with-current-buffer buffer
       ;; restore window configure at kill buffer
@@ -76,8 +83,9 @@
                 (lexical-let ((wc (current-window-configuration)))
                   #'(lambda ()
                       (set-window-configuration wc))) nil t)
+      (setq mi:commit f)
       ;; set keybind
-      (use-local-map (mi:make-message-keymap f))
+      (use-local-map mi:message-keymap)
       ;; set fontlock
       (font-lock-add-keywords nil mi:message-font-locks)
       (when global-font-lock-mode (font-lock-mode t))
@@ -86,19 +94,16 @@
       (save-excursion (insert mi:message-help)))
     (pop-to-buffer buffer)))
 
-;;;; ------------------------------
 ;;;; git command
-;;;; ------------------------------
 (defun mistilteinn-git-now ()
   "run git-now to create temporary commit"
   (interactive)
   (shell-command "git now --compact"))
 
 (defun mi:branch-list ()
-  (remove-if
-   '(lambda (s) (string= "" s))
-   (split-string (shell-command-to-string "git branch | sed 's/^. *//g'")
-                 "\n")))
+  (remove-if '(lambda (s) (string= "" s))
+             (split-string (shell-command-to-string "git branch | sed 's/^. *//g'")
+                           "\n")))
 
 (defun mistilteinn-git-master ()
   "run git-master to masterize current topic branch"
@@ -118,9 +123,7 @@
   (shell-command (format "git ticket create \"%s\"" subject)))
 
 (defun mi:git-fixup ()
-  (interactive)
-  (shell-command (format "git now --fixup \"%s\"" (replace-regexp-in-string "^#.*$" "" (buffer-string))))
-  (mi:close-message-buffer))
+  (shell-command (format "git now --fixup \"%s\"" (replace-regexp-in-string "^#.*$" "" (buffer-string)))))
 
 (defun mistilteinn-git-fixup ()
   "run git-now --fixup to fixup now commit"
