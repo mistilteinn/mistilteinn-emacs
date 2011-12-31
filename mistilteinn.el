@@ -157,10 +157,8 @@
     (init . (lambda () (call-process-shell-command "git ticket list" nil (anything-candidate-buffer 'git-ticket))))
     (action ("Switch topic branch" . mi:switch-topic-branch))))
 
-;; ------------------------------
-;; minor mode
-;; ------------------------------
-(defvar mistilteinn-minor-mode-map (make-sparse-keymap)
+;;;; minor mode
+(defconst mistilteinn-minor-mode-map (make-sparse-keymap)
   "Keymap for the mistilteinn minor mode.")
 
 (define-key mistilteinn-minor-mode-map (kbd "C-c # c") 'mistilteinn-git-ticket-create)
@@ -179,7 +177,7 @@
            'mistilteinn-git-now))
 
 (defun mi:mode-switch ()
-  "Return t and enable mistilteinn-mode if `widen-current-window' can called on current buffer."
+  "Return t and enable mistilteinn-minor-mode if `mistilteinn-minor-mode' can called on current buffer."
   (when (and (not (minibufferp (current-buffer)))
              (not (memq major-mode mistilteinn-exclude-modes)))
     (mistilteinn-minor-mode t)))
