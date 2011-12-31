@@ -136,6 +136,20 @@
   (interactive)
   (mi:show-message-buffer 'mi:git-fixup))
 
+
+(defmacro mi:with-cd (path &rest body)
+  (let ((var (make-symbol "path")))
+    `(let ((,var default-directory))
+       (unwind-protect
+           (progn
+             (cd ,path)
+             ,@body)
+         (cd ,var)))))
+
+(defun mi:git-dir-p (path)
+  "Check `path' is git repository"
+  (save-excursion (mi:with-cd path (eq 0 (shell-command "git rev-parse")))))
+
 ;; ------------------------------
 ;; anything
 ;; ------------------------------
@@ -179,7 +193,8 @@
 (defun mi:mode-switch ()
   "Return t and enable mistilteinn-minor-mode if `mistilteinn-minor-mode' can called on current buffer."
   (when (and (not (minibufferp (current-buffer)))
-             (not (memq major-mode mistilteinn-exclude-modes)))
+             (not (memq major-mode mistilteinn-exclude-modes))
+             (mi:git-dir-p "."))
     (mistilteinn-minor-mode t)))
 
 (define-global-minor-mode global-mistilteinn-mode

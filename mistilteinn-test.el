@@ -8,6 +8,11 @@
 (dont-compile
   (when (fboundp 'expectations)
     (expectations
+      (desc "git-dir-p")
+      (expect t
+        (mi:git-dir-p "."))
+      (expect nil
+        (mi:git-dir-p "/"))
       (desc "command: git-now")
       (expect (mock (shell-command "git now --compact"))
         (mistilteinn-git-now))
