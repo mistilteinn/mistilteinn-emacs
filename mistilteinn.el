@@ -1,33 +1,14 @@
 ;;; mistilteinn.el ---bleis workflow
-
+;;; -*- coding: utf-8 -*-
 ;; Copyright (C) 2011  mzp
 
-;; Author: mzp <mzp@mzpAir.local>
-;; Keywords:processes
-
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
-
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
-
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-;;; Commentary:
-
-;;
 
 ;;; Code:
 (require 'cl)
 
-;; ------------------------------
-;; config
-;; ------------------------------
+;;;; ------------------------------
+;;;; configure
+;;;; ------------------------------
 (defgroup mistilteinn nil
   "New style development with git and emacs"
   :group 'tools)
@@ -38,7 +19,17 @@
   :group 'mistilteinn)
 
 (defcustom mistilteinn-inactive-ticket-regexp  "\\[解決\\]"
-  "Inactive ticket regexp"
+  "A regexp for inactive ticket regexp"
+  :type 'string
+  :group 'mistilteinn)
+
+(defcustom mistilteinn-info-buffer "*mistilteinn-info*"
+  "Buffer name for information"
+  :type 'string
+  :group 'mistilteinn)
+
+(defcustom mistilteinn-message-buffer "*mistilteinn-message*"
+  "Buffer name for message"
   :type 'string
   :group 'mistilteinn)
 
@@ -52,40 +43,9 @@
   "*Face used for active ticket"
   :group 'mistilteinn)
 
-;; ------------------------------
-;; git command
-;; ------------------------------
-(defun mistilteinn-git-now ()
-  "run git-now to create temporary commit"
-  (interactive)
-  (shell-command "git now --compact"))
-
-(defun mi:branch-list ()
-  (remove-if
-   '(lambda (s) (string= "" s))
-   (split-string (shell-command-to-string "git branch | sed 's/^. *//g'")
-                 "\n")))
-
-(defun mistilteinn-git-master ()
-  "run git-master to masterize current topic branch"
-  (interactive)
-  (let* ((branch (completing-read "git-master (default master): " (mi:branch-list) nil nil "master" nil "master"))
-         (cmd    (format "git master %s" branch)))
-    (shell-command cmd)))
-
-(defun mistilteinn-git-info ()
-  "run git-ticket summary to show ticket info"
-  (interactive)
-  (shell-command "git ticket info" "*mistilteinn-info*"))
-
-(defun mistilteinn-git-ticket-create (subject)
-  "run git ticket create to create ticket"
-  (interactive "sSubject: ")
-  (shell-command (format "git ticket create \"%s\"" subject)))
-
-;; message
-(defvar mi:message-buffer "*mistilteinn-message*")
-
+;;;; ------------------------------
+;;;; message buffer
+;;;; ------------------------------
 (defun mi:close-message-buffer ()
   (interactive)
   (kill-buffer (current-buffer)))
@@ -109,7 +69,7 @@
 
 (defun mi:show-message-buffer (f)
   "create commit message buffer"
-  (let ((buffer (generate-new-buffer mi:message-buffer)))
+  (let ((buffer (generate-new-buffer mistilteinn-message-buffer)))
     (with-current-buffer buffer
       ;; restore window configure at kill buffer
       (add-hook 'kill-buffer-hook
@@ -125,6 +85,37 @@
       (insert "# C-c C-c: commit; C-g: close buffer\n")
       (save-excursion (insert mi:message-help)))
     (pop-to-buffer buffer)))
+
+;;;; ------------------------------
+;;;; git command
+;;;; ------------------------------
+(defun mistilteinn-git-now ()
+  "run git-now to create temporary commit"
+  (interactive)
+  (shell-command "git now --compact"))
+
+(defun mi:branch-list ()
+  (remove-if
+   '(lambda (s) (string= "" s))
+   (split-string (shell-command-to-string "git branch | sed 's/^. *//g'")
+                 "\n")))
+
+(defun mistilteinn-git-master ()
+  "run git-master to masterize current topic branch"
+  (interactive)
+  (let* ((branch (completing-read "git-master (default master): " (mi:branch-list) nil nil "master" nil "master"))
+         (cmd    (format "git master %s" branch)))
+    (shell-command cmd)))
+
+(defun mistilteinn-git-info ()
+  "run git-ticket summary to show ticket info"
+  (interactive)
+  (shell-command "git ticket info" mistilteinn-info-buffer))
+
+(defun mistilteinn-git-ticket-create (subject)
+  "run git ticket create to create ticket"
+  (interactive "sSubject: ")
+  (shell-command (format "git ticket create \"%s\"" subject)))
 
 (defun mi:git-fixup ()
   (interactive)
