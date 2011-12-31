@@ -73,6 +73,19 @@ bar
   master
 ")
         (mi:branch-list))
+
+      (desc "mi:close-message-buffer")
+      (expect (mock (kill-buffer *))
+        (mi:close-message-buffer))
+      (desc "mi:switch-topic-branch")
+      (expect (mock (shell-command "git ticket switch id/100"))
+        (mi:switch-topic-branch "id/100"))
+      (desc "highlight a resolved ticket inactive")
+      (expect 'mistilteinn-inactive-ticket-face
+        (get-text-property 1 'face (car (mi:highlight-ticket '("[解決] id/100")))))
+      (desc "highlight a unresolved ticket active")
+      (expect 'mistilteinn-active-ticket-face
+        (get-text-property 1 'face (car (mi:highlight-ticket '("id/100")))))
       )))
 
 (provide 'mistilteinn-test)
