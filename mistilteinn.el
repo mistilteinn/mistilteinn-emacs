@@ -152,9 +152,7 @@
              (file-directory-p path))
     (save-excursion (mi:with-cd path (eq 0 (shell-command "git rev-parse"))))))
 
-;; ------------------------------
-;; anything
-;; ------------------------------
+;;;; anything
 (defun mi:switch-topic-branch (str)
   (shell-command (format "git ticket switch %s" (car (split-string str " ")))
                  "*git-ticket*"))

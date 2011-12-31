@@ -27,10 +27,16 @@ class Git
 end
 
 class Redmine
+  class ConfigError < StandardError; end
+
   def initialize(git)
     @root    = git.config "redmine.url"
     @key     = git.config "redmine.apikey"
     @project = git.config "redmine.project"
+
+    unless @root and @key and @project
+      raise ConfigError.new
+    end
   end
 
   def tickets
@@ -161,13 +167,25 @@ class GitTicket
 end
 
 git = Git.new
-its = Redmine.new git
-git_ticket = GitTicket.new git, its
 
-cmd = "cmd_#{ARGV.first}".to_sym
-if git_ticket.respond_to? cmd then
-  git_ticket.send cmd, *ARGV[1..-1]
-else
-  git_ticket.default(ARGV)
+begin
+  its = Redmine.new git
+  git_ticket = GitTicket.new git, its
+
+  cmd = "cmd_#{ARGV.first}".to_sym
+  if git_ticket.respond_to? cmd then
+    git_ticket.send cmd, *ARGV[1..-1]
+  else
+    git_ticket.default(ARGV)
+  end
+rescue
+  STDERR.puts <<END
+This repository is not configured. Please set redmine information.
+
+git config redmine.url http://example.com/Redmine
+git config redmine.apikey some_api_key
+git config redmine.project project_name
+END
+  exit 1
 end
 
