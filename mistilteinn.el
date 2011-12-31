@@ -49,12 +49,16 @@
   (interactive)
   (kill-buffer (current-buffer)))
 
+(defun mi:strip-comment (s)
+  "strip comment heading #"
+  (replace-regexp-in-string "^#.*\n" "" s))
+
 (defvar mi:commit (lambda () nil))
 (make-variable-buffer-local 'mi:commit)
 (defun mi:commit-message-buffer ()
   "Commit current message buffer."
   (interactive)
-  (funcall mi:commit)
+  (funcall mi:commit (mi:strip-comment (buffer-string)))
   (mi:close-message-buffer))
 
 (defvar mi:message-keymap
@@ -101,9 +105,11 @@
   (shell-command "git now --compact"))
 
 (defun mi:branch-list ()
+  "Get branch list for current repository."
   (remove-if '(lambda (s) (string= "" s))
-             (split-string (shell-command-to-string "git branch | sed 's/^. *//g'")
-                           "\n")))
+             (mapcar '(lambda (s) (replace-regexp-in-string "^*? *" "" s))
+                     (split-string (shell-command-to-string "git branch")
+                                   "\n"))))
 
 (defun mistilteinn-git-master ()
   "run git-master to masterize current topic branch"
@@ -118,12 +124,12 @@
   (shell-command "git ticket info" mistilteinn-info-buffer))
 
 (defun mistilteinn-git-ticket-create (subject)
-  "run git ticket create to create ticket"
+  "Create ticket."
   (interactive "sSubject: ")
   (shell-command (format "git ticket create \"%s\"" subject)))
 
-(defun mi:git-fixup ()
-  (shell-command (format "git now --fixup \"%s\"" (replace-regexp-in-string "^#.*$" "" (buffer-string)))))
+(defun mi:git-fixup (s)
+  (shell-command (format "git now --fixup \"%s\"" s)))
 
 (defun mistilteinn-git-fixup ()
   "run git-now --fixup to fixup now commit"
