@@ -29,7 +29,9 @@
       (desc "command: git-now --fixup")
       (expect (mock (shell-command "git now --fixup \"ticket\""))
          (mi:git-fixup "ticket"))
-
+      (desc "command: git-now --diff")
+      (expect (mock (shell-command "git now --diff" "buf"))
+        (mi:git-diff "buf"))
       (desc "message buffer: close-message-buffer should kill current buffer")
       (expect nil
         (let ((buffer (generate-new-buffer "test")))

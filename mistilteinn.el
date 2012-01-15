@@ -32,6 +32,11 @@
   :type 'string
   :group 'mistilteinn)
 
+(defcustom mistilteinn-diff-buffer "*mistilteinn-diff*"
+  "Buffer name for diff"
+  :type 'string
+  :group 'mistilteinn)
+
 (defface mistilteinn-inactive-ticket-face
   '((t (:foreground "blue")))
   "*Face used for inactive ticket"
@@ -131,6 +136,9 @@
 (defun mi:git-fixup (s)
   (shell-command (format "git now --fixup \"%s\"" s)))
 
+(defun mi:git-diff (buf)
+  (shell-command "git now --diff" buf))
+
 (defun mistilteinn-git-fixup ()
   "run git-now --fixup to fixup now commit"
   (interactive)
@@ -152,6 +160,12 @@
               (file-directory-p path))
      (save-excursion (mi:with-cd path (eq 0
                                           (call-process "git" nil nil nil "rev-parse"))))))
+
+(defun mistilteinn-git-diff ()
+  (interactive)
+  (with-current-buffer mistilteinn-diff-buffer
+    (diff-mode)
+    (mi:git-diff (current-buffer))))
 
 ;;;; anything
 (defun mi:switch-topic-branch (str)
@@ -181,6 +195,7 @@
 (define-key mistilteinn-minor-mode-map (kbd "C-c # n") 'mistilteinn-git-now)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # i") 'mistilteinn-git-info)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # f") 'mistilteinn-git-fixup)
+(define-key mistilteinn-minor-mode-map (kbd "C-c # d") 'mistilteinn-git-diff)
 
 (define-minor-mode mistilteinn-minor-mode
   "mistilteinn"
