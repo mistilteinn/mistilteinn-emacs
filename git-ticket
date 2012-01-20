@@ -6,16 +6,30 @@ require 'json'
 require 'pp'
 require 'net/http'
 require 'net/https'
+require 'tempfile'
 
 class Git
-  def config(name)
-    str = %x(git config #{name} 2>/dev/null || echo "").strip
-    if str.empty? then
-      nil
-    else
-      str
+  class Config
+    def set(name, value)
+      %x(git config #{name} "#{value}")
+    end
+
+    def get(name)
+      val = %x(git config #{name}).strip
+      if val.empty? then nil else val end
+    end
+    
+    def getByRegexp(regex)
+      %x(git config --get-regexp #{regex}).split(/\n/).map do |line|
+        line.match(/(.+?) (.*)/)[1..2]
+      end
     end
   end
+
+  def initialize
+    @config = Config.new
+  end
+  attr_reader :config
 
   def branch
     %x(git branch -l | grep "*" | cut -d " " -f 2).strip
@@ -30,9 +44,9 @@ class Redmine
   class ConfigError < StandardError; end
 
   def initialize(git)
-    @root    = git.config "redmine.url"
-    @key     = git.config "redmine.apikey"
-    @project = git.config "redmine.project"
+    @root    = git.config.get "redmine.url"
+    @key     = git.config.get "redmine.apikey"
+    @project = git.config.get "redmine.project"
 
     unless @root and @key and @project
       raise ConfigError.new
@@ -120,6 +134,81 @@ Subject: #{issue['subject']}
   end
 end
 
+class GitConfigITS
+  class ConfigError < StandardError; end
+
+  def initialize(git)
+    @git = git
+  end
+  
+  def tickets
+    lastTicketNo = @git.config.get("ticket.ticketNo").to_i
+    (1...lastTicketNo).map do |id|
+      data = {}
+      @git.config.getByRegexp("ticket\\.id/#{id}").each do |name, title|
+        name.sub!("ticket.id/#{id}.", "")
+        data[name] = title
+      end
+      {'id' => id, 'subject' => data["title"],
+        'status' => {'name' => data["status"]}}
+    end
+  end
+
+  def summary(id)
+  end
+
+  def info(id)
+    body = <<-END
+     ID: #{id}
+Subject: #{@git.config.get "ticket.id/#{id}.title"}
+ Author: #{@git.config.get "ticket.id/#{id}.author"}
+   Date: #{@git.config.get "ticket.id/#{id}.date"}
+#{@git.config.get "ticket.id/#{id}.description"}
+    END
+  end
+
+  def create(title = "")
+    ticketFormat = <<END
+title: #{title}
+author: #{@git.config.get "user.name"}
+date: #{Time.now}
+status: new
+description: |-
+  
+END
+
+    editTempFile(ticketFormat) do |f, modified|
+      return if not modified
+
+      ticketNo = @git.config.get("ticket.ticketNo").to_i
+      data = YAML.load f.read
+      data.each do |key,value|
+        @git.config.set("ticket.id/#{ticketNo}.#{key}", value)
+      end
+      @git.config.set("ticket.ticketNo", (ticketNo+1).to_s)
+    end
+  end
+
+  def edit(id)
+  end
+
+  private
+  def editTempFile(initialString, &proc)
+    tmp = Tempfile.new("tmp")
+    tmp.write initialString
+    tmp.close
+
+    editor = @git.config.get("core.editor") || ENV["EDITOR"]
+    system "#{editor} #{tmp.path}"
+    File.open(tmp.path) do |f|
+      modified = f.read != initialString
+      f.rewind
+      proc.call(f, modified)
+    end
+    tmp.unlink
+  end
+end
+
 class GitTicket
   def initialize(git, its)
     @git = git
@@ -169,7 +258,16 @@ end
 git = Git.new
 
 begin
-  its = Redmine.new git
+  case git.config.get "ticket.its"
+  when 'redmine'
+    its = Redmine.new git
+  when 'local'
+    its = GitConfigITS.new git
+  else
+    # todo: error handling
+    STDERR.puts "no its specifed"
+    exit 1
+  end
   git_ticket = GitTicket.new git, its
 
   cmd = "cmd_#{ARGV.first}".to_sym
@@ -180,7 +278,7 @@ begin
   end
 rescue
   STDERR.puts <<END
-This repository is not configured. Please set redmine information.
+# This repository is not configured. Please set redmine information.
 
 git config redmine.url http://example.com/Redmine
 git config redmine.apikey some_api_key
