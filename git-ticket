@@ -6,16 +6,78 @@ require 'json'
 require 'pp'
 require 'net/http'
 require 'net/https'
+require 'yaml'
+require 'tempfile'
 
 class Git
-  def config(name)
-    str = %x(git config #{name} 2>/dev/null || echo "").strip
-    if str.empty? then
-      nil
-    else
-      str
+  class Config
+    class ORMapper
+      def initialize(config, pathes=[])
+        @pathes = pathes
+        @config = config
+      end
+      def [](key)
+        key = key.to_s if key.class == Symbol
+        method_missing(key)
+      end
+      def method_missing(name, *args)
+        if assignment? name then
+          # how to add a new line to .git/config?
+          return Config::set(@pathes.join('.')+"."+name.to_s[0..-2], args[0])
+        end
+
+        data = @config[name.to_s]
+        case data
+        when NilClass
+          nil
+        when Hash
+          ORMapper.new(data, @pathes+[name.to_s])
+        else
+          data
+        end
+      end
+      
+      private
+      def assignment?(method_name)
+        method_name.to_s[-1..-1] == '='
+      end
+    end
+
+    def Config::read
+      @config = {}
+      getByRegexp('".*"').each do |path,value|
+        subconfig = @config
+        elems = path.split '.'
+        elems[0..-2].each do |path|
+          subconfig[path] = {} if subconfig[path].nil?
+          subconfig = subconfig[path]
+        end
+        subconfig[elems[-1]] = value
+      end
+      return ORMapper.new @config
+    end
+
+    private
+    def Config::set(name, value)
+      %x(git config #{name} "#{value}")
+    end
+
+#     def get(name)
+#       val = %x(git config #{name}).strip
+#       if val.empty? then nil else val end
+#     end
+    
+    def Config::getByRegexp(regex)
+      %x(git config --get-regexp #{regex}).split(/\n/).map do |line|
+        line.match(/(.+?) (.*)/)[1..2]
+      end
     end
   end
+
+  def initialize
+    @config = Config.read
+  end
+  attr_reader :config
 
   def branch
     %x(git branch -l | grep "*" | cut -d " " -f 2).strip
@@ -30,9 +92,9 @@ class Redmine
   class ConfigError < StandardError; end
 
   def initialize(git)
-    @root    = git.config "redmine.url"
-    @key     = git.config "redmine.apikey"
-    @project = git.config "redmine.project"
+    @root    = git.config.redmine.url
+    @key     = git.config.redmine.apikey
+    @project = git.config.redmine.project
 
     unless @root and @key and @project
       raise ConfigError.new
@@ -195,6 +257,81 @@ Subject: #{issue['title']}
   end
 end
 
+class GitConfigITS
+  class ConfigError < StandardError; end
+
+  def initialize(git)
+    @git = git
+  end
+  
+  def tickets
+    lastTicketNo = @git.config.ticket.ticketno.to_i
+    (1...lastTicketNo).map do |id|
+      data = @git.config.ticket["id/#{id}"]
+      {'id' => id, 'subject' => data.subject, 'status' => {'name' => data.status}}
+    end
+  end
+
+  def summary(id)
+  end
+
+  def info(id)
+    data = @git.config.ticket["id/#{id}"]
+    body = <<-END
+     ID: #{id}
+Subject: #{data.subject}
+ Author: #{data.author}
+   Date: #{data.date}
+    END
+    unless data.description.nil? or data.description.empty? then
+      body += "\n" + data.description
+    end
+    body
+  end
+
+  def create(title = "")
+    ticketFormat = <<END
+Subject: #{title}
+Author: #{@git.config.user.name}
+Date: #{Time.now}
+Status: new
+Description: |-
+  
+END
+
+    editTempFile(ticketFormat) do |f, modified|
+      return if not modified and title.empty?
+
+      ticketNo = (@git.config.ticket.ticketNo || "1").to_i
+      YAML.load_documents(f) do |yaml|
+        yaml.each do |key, value|
+          @git.config.ticket["id/#{ticketNo}"][key] = value
+        end
+      end
+      @git.config.ticket.ticketno = (ticketNo+1).to_s
+    end
+  end
+
+  def edit(id)
+  end
+
+  private
+  def editTempFile(initialString, &proc)
+    tmp = Tempfile.new("tmp")
+    tmp.write initialString
+    tmp.close
+
+    editor = @git.config.core.editor || ENV["EDITOR"]
+    system "#{editor} #{tmp.path}"
+    File.open(tmp.path) do |f|
+      modified = f.read != initialString
+      f.rewind
+      proc.call(f, modified)
+    end
+    tmp.unlink
+  end
+end
+
 class GitTicket
   def initialize(git, its)
     @git = git
@@ -223,6 +360,10 @@ class GitTicket
     puts "Switch to topic branch: #{@its.summary(id)}"
   end
 
+  def cmd_edit(id)
+    puts @its.edit(id)
+  end
+
   def cmd_create(title)
     @its.create title
   end
@@ -242,9 +383,19 @@ class GitTicket
 end
 
 git = Git.new
-
 begin
-  its = Redmine.new git
+  case git.config.ticket.its
+  when 'redmine'
+    its = Redmine.new git
+  when 'github'
+    its = Github.new git
+  when 'local'
+    its = GitConfigITS.new git
+  else
+    # todo: error handling
+    STDERR.puts "no its specifed"
+    exit 1
+  end
   git_ticket = GitTicket.new git, its
 
   cmd = "cmd_#{ARGV.first}".to_sym
@@ -255,7 +406,7 @@ begin
   end
 rescue
   STDERR.puts <<END
-This repository is not configured. Please set redmine information.
+# # This repository is not configured. Please set redmine information.
 
 git config redmine.url http://example.com/Redmine
 git config redmine.apikey some_api_key
