@@ -1,5 +1,5 @@
-#!/bin/sh
-
+#!/bin/bash
+echo $(pwd)
 PREFIX="from now"
 MESSAGE="[${PREFIX}] `date +\"%Y/%m/%d %T\"`"
 

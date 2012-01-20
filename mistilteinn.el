@@ -163,7 +163,9 @@
 
 (defun mistilteinn-git-diff ()
   (interactive)
-  (with-current-buffer mistilteinn-diff-buffer
+  (when (buffer-live-p mistilteinn-diff-buffer)
+    (kill-buffer mistilteinn-diff-buffer))
+  (with-current-buffer (get-buffer-create mistilteinn-diff-buffer)
     (diff-mode)
     (mi:git-diff (current-buffer))))
 
