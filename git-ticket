@@ -6,6 +6,7 @@ require 'json'
 require 'pp'
 require 'net/http'
 require 'net/https'
+require 'yaml'
 require 'tempfile'
 
 class Git
@@ -178,12 +179,13 @@ description: |-
 END
 
     editTempFile(ticketFormat) do |f, modified|
-      return if not modified
+      return if not modified and title.empty?
 
-      ticketNo = @git.config.get("ticket.ticketNo").to_i
-      data = YAML.load f.read
-      data.each do |key,value|
-        @git.config.set("ticket.id/#{ticketNo}.#{key}", value)
+      ticketNo = (@git.config.get("ticket.ticketNo") || "1").to_i
+      YAML.load_documents(f) do |yaml|
+        yaml.each do |key, value|
+          @git.config.set("ticket.id/#{ticketNo}.#{key}", value)
+        end
       end
       @git.config.set("ticket.ticketNo", (ticketNo+1).to_s)
     end
@@ -276,14 +278,14 @@ begin
   else
     git_ticket.default(ARGV)
   end
-rescue
-  STDERR.puts <<END
-# This repository is not configured. Please set redmine information.
+# rescue
+#   STDERR.puts <<END
+# # This repository is not configured. Please set redmine information.
 
-git config redmine.url http://example.com/Redmine
-git config redmine.apikey some_api_key
-git config redmine.project project_name
-END
-  exit 1
+# git config redmine.url http://example.com/Redmine
+# git config redmine.apikey some_api_key
+# git config redmine.project project_name
+# END
+#   exit 1
 end
 
