@@ -120,6 +120,81 @@ Subject: #{issue['subject']}
   end
 end
 
+class Github
+  class ConfigError < StandardError; end
+
+  API_URL_ROOT = "https://api.github.com/"
+
+  def initialize(git)
+    @url = git.config "github.url"
+    unless @url
+      raise ConfigError.new
+    end
+  end
+
+  def tickets
+    api("issues").map do |issue|
+      {
+        'id' => issue['number'],
+        'subject' => issue['title'],
+        'status' => {'name' => issue['state']}
+      }
+    end
+  end
+
+  def summary(id)
+    issue = api("issues/#{id}")
+    "\##{issue['number']} #{issue['title']}"
+  end
+
+  def info(id)
+    issue = api("issues/#{id}")
+    body = <<-END
+     ID: #{issue['number']}
+Subject: #{issue['title']}
+ Author: #{issue['user']['login']}
+   Date: #{issue['updated_at']}
+    END
+
+    unless issue['body'].empty?
+      body << "\n"
+      body << issue['body']
+    end
+
+    comments = api("issues/#{id}/comments")
+    unless comments.nil?
+      body << "\n\nnotes:\n"
+
+      comments.each_with_index do |comment, i|
+        unless comment['body'] == ''
+          body << <<-END
+##{i+1}:
+#{comment['body']}
+          END
+        end
+      end
+      body
+    end
+
+    body
+  end
+
+  def create(title)
+    # TODO
+  end
+
+  def api(api_name, params = {})
+    api_uri = URI(API_URL_ROOT) + "./repos/" + ("./" + URI(@url).path)
+    url = api_uri + ("./#{api_name}?" + params.map{|key,value| "#{key}=#{value}" }.join("&"))
+    begin
+      open(url) {|io| JSON.parse(io.read)}
+    rescue => e
+      puts "cannot access: #{url}"
+      raise e
+    end
+  end
+end
+
 class GitTicket
   def initialize(git, its)
     @git = git
