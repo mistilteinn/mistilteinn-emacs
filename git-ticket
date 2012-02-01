@@ -11,42 +11,68 @@ require 'tempfile'
 
 class Git
   class Config
-    class ORMapper
-      def initialize(config, pathes=[])
-        @pathes = pathes
-        @config = config
-      end
-      def [](key)
-        key = key.to_s if key.class == Symbol
-        method_missing(key)
-      end
-      def method_missing(name, *args)
-        if assignment? name then
-          # how to add a new line to .git/config?
-          return Config::set(@pathes.join('.')+"."+name.to_s[0..-2], args[0])
-        end
+    def initialize(config_hash, path)
+      @config = config_hash
+      @path = path
+    end
+    attr_reader :config
 
-        data = @config[name.to_s]
-        case data
-        when NilClass
-          nil
-        when Hash
-          ORMapper.new(data, @pathes+[name.to_s])
-        else
-          data
-        end
+    def has_key?(key)
+      @config.has_key?(key) || @config.has_key?(key.to_s)
+    end
+
+    def []=(*args)
+      assignment(args[0], args[1])
+    end
+    def [](key)
+      key = key.to_s if key.class == Symbol
+      method_missing(key)
+    end
+    def method_missing(name, *args)
+      name = name.to_s
+      is_assignment = create_if_nil = false
+      if name[-1..-1] == '=' then
+        is_assignment = true
+        name.slice! -1
       end
-      
-      private
-      def assignment?(method_name)
-        method_name.to_s[-1..-1] == '='
+      if name[-1..-1] == '_' then
+        create_if_nil = true
+        name.slice! -1
+      end
+
+      return assignment(name, args[0]) if is_assignment
+
+      config_object = get_config_object(@path+[name.to_s])
+      return nil if config_object.config.empty? and not create_if_nil
+
+      if config_object.config.class == Hash then
+        config_object
+      else
+        config_object.config
       end
     end
 
-    def Config::read
-      @config = {}
-      getByRegexp('".*"').each do |path,value|
-        subconfig = @config
+    private
+    def get_config_object(path)
+      return @@config_objects[path] if @@config_objects.has_key? path
+
+      if @config.has_key? path[-1] then
+        @@config_objects[path] = Config::new(@config[path[-1]], path)
+      else
+        @config[path[-1]] = {}
+        @@config_objects[path] = Config::new({}, path)
+      end
+    end
+
+    def Config::init
+      @@config_objects = {[] => Config::parse_config}
+      @@config_objects[[]]
+    end
+
+    def Config::parse_config
+      config_hash = {}
+      get_by_regexp('".*"').each do |path,value|
+        subconfig = config_hash
         elems = path.split '.'
         elems[0..-2].each do |path|
           subconfig[path] = {} if subconfig[path].nil?
@@ -54,28 +80,26 @@ class Git
         end
         subconfig[elems[-1]] = value
       end
-      return ORMapper.new @config
+      Config::new(config_hash, [])
     end
 
-    private
-    def Config::set(name, value)
-      %x(git config #{name} "#{value}")
-    end
-
-#     def get(name)
-#       val = %x(git config #{name}).strip
-#       if val.empty? then nil else val end
-#     end
-    
-    def Config::getByRegexp(regex)
+    def Config::get_by_regexp(regex)
       %x(git config --get-regexp #{regex}).split(/\n/).map do |line|
         line.match(/(.+?) (.*)/)[1..2]
       end
     end
-  end
 
+    def Config::set(name, value)
+      %x(git config #{name} "#{value}")
+    end
+
+    def assignment(key, value)
+      Config::set("#{@path.join('.')}.#{key}", value)
+    end
+  end
+      
   def initialize
-    @config = Config.read
+    @config = Config::init
   end
   attr_reader :config
 
@@ -188,7 +212,7 @@ class Github
   API_URL_ROOT = "https://api.github.com/"
 
   def initialize(git)
-    @url = git.config "github.url"
+    @url = git.config.github.url
     unless @url
       raise ConfigError.new
     end
@@ -276,7 +300,7 @@ class GitConfigITS
   end
 
   def info(id)
-    data = @git.config.ticket["id/#{id}"]
+    data = @git.config.ticket["id/#{id}_"]
     body = <<-END
      ID: #{id}
 Subject: #{data.subject}
@@ -302,13 +326,15 @@ END
     editTempFile(ticketFormat) do |f, modified|
       return if not modified and title.empty?
 
-      ticketNo = (@git.config.ticket.ticketNo || "1").to_i
+      ticket = @git.config.ticket
+      ticketNo = (ticket.ticketno || "1").to_i
+
       YAML.load_documents(f) do |yaml|
         yaml.each do |key, value|
-          @git.config.ticket["id/#{ticketNo}"][key] = value
+          ticket["id/#{ticketNo}_"][key] = value
         end
       end
-      @git.config.ticket.ticketno = (ticketNo+1).to_s
+      ticket.ticketno = (ticketNo+1).to_s
     end
   end
 
@@ -321,7 +347,7 @@ END
     tmp.write initialString
     tmp.close
 
-    editor = @git.config.core.editor || ENV["EDITOR"]
+    editor = @git.config.core_.editor || ENV["EDITOR"]
     system "#{editor} #{tmp.path}"
     File.open(tmp.path) do |f|
       modified = f.read != initialString
@@ -384,7 +410,7 @@ end
 
 git = Git.new
 begin
-  case git.config.ticket.its
+  case git.config.ticket_.its
   when 'redmine'
     its = Redmine.new git
   when 'github'
@@ -392,9 +418,7 @@ begin
   when 'local'
     its = GitConfigITS.new git
   else
-    # todo: error handling
-    STDERR.puts "no its specifed"
-    exit 1
+    its = Redmine.new git
   end
   git_ticket = GitTicket.new git, its
 
@@ -406,7 +430,7 @@ begin
   end
 rescue
   STDERR.puts <<END
-# # This repository is not configured. Please set redmine information.
+# # # This repository is not configured. Please set redmine information.
 
 git config redmine.url http://example.com/Redmine
 git config redmine.apikey some_api_key
