@@ -5,13 +5,14 @@ Requirement
 ----------------
 
  * Ruby 1.8.7
+ * Mistilteinn-shell
 
 Setup
 ------------------------------
 
-Copy subcommand to PATH:
+Init your work tree:
 
-    $ cp git-* /path/to/bin
+    $ mistilteinn init
 
 Add your .emacs:
 
@@ -28,12 +29,6 @@ Add your .emacs:
        '(anything-c-source-git-ticket)
        "*mistiltein*"))
     (define-key global-map (kbd "C-t") 'anything-for-mistiltein))
-
-
-
-Copy hooks to project:
-
-    $ cp hooks/* /path/to/project/.git/hooks
 
 Authors
 ----------------
