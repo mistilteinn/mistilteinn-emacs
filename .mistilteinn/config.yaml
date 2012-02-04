@@ -1,0 +1,6 @@
+ticket:
+  source: redmine
+
+redmine:
+  url: https://codefirst.org/redmine/
+  project: mistilteinn-emacs

@@ -2,7 +2,6 @@
 ;;; mistilteinn.el ---bleis workflow
 ;; Copyright (C) 2011  mzp
 
-
 ;;; Code:
 (require 'cl)
 
@@ -123,15 +122,10 @@
          (cmd    (format "git master %s" branch)))
     (shell-command cmd)))
 
-(defun mistilteinn-git-info ()
-  "run git-ticket summary to show ticket info"
-  (interactive)
-  (shell-command "git ticket info" mistilteinn-info-buffer))
-
 (defun mistilteinn-git-ticket-create (subject)
   "Create ticket."
   (interactive "sSubject: ")
-  (shell-command (format "git ticket create \"%s\"" subject)))
+  (shell-command (format "mistilteinn create \"%s\"" subject)))
 
 (defun mi:git-fixup (s)
   (shell-command (format "git now --fixup \"%s\"" s)))
@@ -144,23 +138,6 @@
   (interactive)
   (mi:show-message-buffer 'mi:git-fixup))
 
-
-(defmacro mi:with-cd (path &rest body)
-  (let ((var (make-symbol "path")))
-    `(let ((,var default-directory))
-       (unwind-protect
-           (progn
-             (cd ,path)
-             ,@body)
-         (cd ,var)))))
-
-(defun mi:git-dir-p (path)
-  "Check `path' is git repository"
-  (when (and (file-exists-p path)
-              (file-directory-p path))
-     (save-excursion (mi:with-cd path (eq 0
-                                          (call-process "git" nil nil nil "rev-parse"))))))
-
 (defun mistilteinn-git-diff ()
   (interactive)
   (when (buffer-live-p mistilteinn-diff-buffer)
@@ -171,8 +148,10 @@
 
 ;;;; anything
 (defun mi:switch-topic-branch (str)
-  (shell-command (format "git ticket switch %s" (car (split-string str " ")))
-                 "*git-ticket*"))
+  (let ((id (car (split-string str " "))))
+    (shell-command
+     (format "git branch id/%s 2>/dev/null || git checkout id/%s" id id)
+     "*git-ticket*")))
 
 (defun mi:highlight-ticket (tickets)
   (loop for ticket in tickets
@@ -185,7 +164,7 @@
   '((name . "Tickets")
     (candidates-in-buffer)
     (candidate-transformer mi:highlight-ticket)
-    (init . (lambda () (call-process-shell-command "git ticket list" nil (anything-candidate-buffer 'git-ticket))))
+    (init . (lambda () (call-process-shell-command "mistilteinn list" nil (anything-candidate-buffer 'git-ticket))))
     (action ("Switch topic branch" . mi:switch-topic-branch))))
 
 ;;;; minor mode
@@ -195,7 +174,6 @@
 (define-key mistilteinn-minor-mode-map (kbd "C-c # c") 'mistilteinn-git-ticket-create)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # m") 'mistilteinn-git-master)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # n") 'mistilteinn-git-now)
-(define-key mistilteinn-minor-mode-map (kbd "C-c # i") 'mistilteinn-git-info)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # f") 'mistilteinn-git-fixup)
 (define-key mistilteinn-minor-mode-map (kbd "C-c # d") 'mistilteinn-git-diff)
 
@@ -208,11 +186,27 @@
            'after-save-hook
            'mistilteinn-git-now))
 
+(defmacro mi:with-cd (path &rest body)
+  (let ((var (make-symbol "path")))
+    `(let ((,var default-directory))
+       (unwind-protect
+           (progn
+             (cd ,path)
+             ,@body)
+         (cd ,var)))))
+
+(defun mi:inside-p (path)
+  (and (file-exists-p path)
+       (file-directory-p path)
+       (mi:with-cd path
+                   (equal "0"
+                          (shell-command-to-string "mistilteinn is-inside; echo -n $?")))))
+
 (defun mi:mode-switch ()
   "Return t and enable mistilteinn-minor-mode if `mistilteinn-minor-mode' can called on current buffer."
   (when (and (not (minibufferp (current-buffer)))
              (not (memq major-mode mistilteinn-exclude-modes))
-             (mi:git-dir-p "."))
+             (mi:inside-p "."))
     (mistilteinn-minor-mode t)))
 
 (define-global-minor-mode global-mistilteinn-mode

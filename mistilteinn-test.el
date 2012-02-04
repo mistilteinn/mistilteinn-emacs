@@ -8,11 +8,11 @@
 (dont-compile
   (when (fboundp 'expectations)
     (expectations
-      (desc "git-dir-p")
+      (desc "mistilteinn inside")
       (expect t
-        (mi:git-dir-p "."))
+        (mi:inside-p "."))
       (expect nil
-        (mi:git-dir-p "/"))
+        (mi:inside-p "/"))
       (desc "command: git-now")
       (expect (mock (shell-command "git now --compact"))
         (mistilteinn-git-now))
@@ -20,11 +20,8 @@
       (expect (mock (shell-command "git master master"))
         (stub completing-read => "master")
         (mistilteinn-git-master))
-      (desc "command: git-ticket")
-      (expect (mock (shell-command "git ticket info"))
-        (mistilteinn-git-info))
-      (desc "command: git-ticket create")
-      (expect (mock (shell-command "git ticket create \"ticket title\""))
+      (desc "command: mistilteinn create")
+      (expect (mock (shell-command "mistilteinn create \"ticket title\""))
         (mistilteinn-git-ticket-create "ticket title"))
       (desc "command: git-now --fixup")
       (expect (mock (shell-command "git now --fixup \"ticket\""))
@@ -86,8 +83,8 @@ bar
       (expect (mock (kill-buffer *))
         (mi:close-message-buffer))
       (desc "mi:switch-topic-branch")
-      (expect (mock (shell-command "git ticket switch id/100"))
-        (mi:switch-topic-branch "id/100"))
+      (expect (mock (shell-command "git branch id/100 2>/dev/null || git checkout id/100"))
+        (mi:switch-topic-branch "100"))
       (desc "highlight a resolved ticket inactive")
       (expect 'mistilteinn-inactive-ticket-face
         (get-text-property 1 'face (car (mi:highlight-ticket '("[解決] id/100")))))
