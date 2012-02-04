@@ -150,7 +150,7 @@
 (defun mi:switch-topic-branch (str)
   (let ((id (car (split-string str " "))))
     (shell-command
-     (format "git branch id/%s 2>/dev/null || git checkout id/%s" id id)
+     (format "git branch id/%s 2>/dev/null; git checkout id/%s" id id)
      "*git-ticket*")))
 
 (defun mi:highlight-ticket (tickets)

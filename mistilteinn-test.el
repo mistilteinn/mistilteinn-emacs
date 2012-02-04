@@ -83,7 +83,7 @@ bar
       (expect (mock (kill-buffer *))
         (mi:close-message-buffer))
       (desc "mi:switch-topic-branch")
-      (expect (mock (shell-command "git branch id/100 2>/dev/null || git checkout id/100"))
+      (expect (mock (shell-command "git branch id/100 2>/dev/null; git checkout id/100"))
         (mi:switch-topic-branch "100"))
       (desc "highlight a resolved ticket inactive")
       (expect 'mistilteinn-inactive-ticket-face
