@@ -1,6 +1,14 @@
+;;; mistilteinn.el --- minor-mode for mistilteinn
 ;;; -*- coding: utf-8 -*-
-;;; mistilteinn.el ---bleis workflow
-;; Copyright (C) 2011  mzp
+;; Copyright (C) 2012 mzp
+;; Author: mzp <mzpppp_at_gmail.com>
+;;
+;; mistilteinn.el is free software; you can redistribute it and/or modify
+;; it under the terms of MIT License.
+;;
+;; Web sites:
+;;  stable verison: http://www.emacswiki.org/cgi-bin/wiki?mistilteinn.el
+;;  development version: https://github.com/mistilteinn/mistilteinn-emacs
 
 ;;; Code:
 (require 'cl)
@@ -213,4 +221,4 @@
   mistilteinn-minor-mode mi:mode-switch)
 
 (provide 'mistilteinn)
-;;; mistilteinn.el ends here
+;;; mistilteinn.el ends here.

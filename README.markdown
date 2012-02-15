@@ -1,20 +1,10 @@
 Mistilteinn for Emacs
 ======================
 
-Requirement
-----------------
-
- * Ruby 1.8.7
- * Mistilteinn-shell
-
-Setup
+Install
 ------------------------------
 
-Init your work tree:
-
-    $ mistilteinn init
-
-Add your .emacs:
+Copy `mistilteinn.el` to `load-path`, and add your .emacs:
 
     (add-to-list 'load-path "~/workspaces/mistilteinn/")
     (require 'mistilteinn)
@@ -37,9 +27,7 @@ Authors
  * @suer
  * @mallowlabs
 
-
 Acknowledge
 ----------------
 
  * @bleis (original mistilteinn author)
- * @tosikawa (git-now author)
