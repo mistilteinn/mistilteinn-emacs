@@ -1,14 +1,43 @@
 ;;; mistilteinn.el --- minor-mode for mistilteinn
 ;;; -*- coding: utf-8 -*-
-;; Copyright (C) 2012 mzp
-;; Author: mzp <mzpppp_at_gmail.com>
+;;
+;;; Install:
+;;
+;; (1) Install mistilteinn system by rubygems.
+;;
+;;    gem install mistilteinn
+;;
+;; (2) Copy this file to load-path
+;;
+;; (3) Add following code to .emacs
+;;
+;;    (add-to-list 'load-path "~/workspaces/mistilteinn/")
+;;    (require 'mistilteinn)
+;;    ;; for minor mode
+;;    (global-mistilteinn-mode t)
+;;    ;; for anything
+;;    (defun anything-for-mistiltein ()
+;;      (interactive)
+;;      (anything-other-buffer
+;;        '(anything-c-source-git-ticket) "*mistiltein*"))
+;;    (define-key global-map (kbd "C-t") 'anything-for-mistiltein))
+;;
+;;; Web sites:
+;;
+;;  stable verison: http://www.emacswiki.org/cgi-bin/wiki?mistilteinn.el
+;;  development version: https://github.com/mistilteinn/mistilteinn-emacs
+;;  mistilteinn website: http://mistilteinn.github.com
+;;
+;;; Author:
+;;
+;; @mzp
+;; @mallowlabs
+;; @suer
+;;
+;;; License:
 ;;
 ;; mistilteinn.el is free software; you can redistribute it and/or modify
 ;; it under the terms of MIT License.
-;;
-;; Web sites:
-;;  stable verison: http://www.emacswiki.org/cgi-bin/wiki?mistilteinn.el
-;;  development version: https://github.com/mistilteinn/mistilteinn-emacs
 
 ;;; Code:
 (require 'cl)
