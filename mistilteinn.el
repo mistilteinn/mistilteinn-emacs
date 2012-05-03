@@ -152,7 +152,7 @@
 (defun mistilteinn-git-now ()
   "run git-now to create temporary commit"
   (interactive)
-  (shell-command "git now --compact"))
+  (shell-command "git now --compact | head -1"))
 
 (defun mi:git-now ()
   (interactive)
