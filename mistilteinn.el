@@ -201,7 +201,7 @@
 (defun mi:switch-topic-branch (str)
   (let ((id (car (split-string str " "))))
     (shell-command
-     (format "mistilteinn branch %s" id)
+     (format "mistilteinn switch %s" id)
      "*git-ticket*")))
 
 (defun mi:highlight-ticket (tickets)
